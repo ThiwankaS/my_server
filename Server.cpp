@@ -141,62 +141,47 @@ namespace HTTP {
         }
     }
 
-    void Server::send_header(int new_fd, size_t size) {
-        char header[512];
-        std::snprintf(header, sizeof(header),
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/html\r\n"
-            "Content-Length: %zu\r\n"
-            "Connection: close\r\n"
-            "\r\n",
-            size
-        );
-        send(new_fd, header, std::strlen(header), 0);
-    }
-
-    std::string Server::load_home_page(void) {
-        std::string file_name = "./webpage/index.html", line;
-        std::ifstream home_page(file_name);
-        std::ostringstream ss;
-        if(home_page.is_open()) {
-            while(std::getline(home_page, line)) {
-                ss << line << "\n";
-            }
-        }
-        return (ss.str());
-    }
-
-    void Server::image_header(int new_fd, size_t size) {
+    void Server::send_header(int new_fd, std::string type, size_t size) {
         std::string header = "HTTP/1.1 200 OK\r\n";
-            header += "Content-Type: image/png\r\n";
+            header += "Content-Type: " + type + "\r\n";
             header += "Content-Length: " + std::to_string(size) + "\r\n";
             header += "Connection: close\r\n";
             header += "\r\n";
         send(new_fd, header.c_str(), header.size(), 0);
     }
 
-    void Server::send_image(int new_fd) {
-        std::ifstream file("./webpage/cpp.png", std::ios::binary | std::ios::ate);
+    void Server::serve_binary_file(int new_fd, const std::string& path, const std::string& type) {
+        std::ifstream file(path, std::ios::binary | std::ios::ate);
         if(!file) {
-            std::cerr << "Can not open image file \n";
+            std::cerr << "Can not open image file " + path + "\n";
+            return;
         }
         std::streamsize file_size = file.tellg();
         file.seekg(0, std::ios::beg);
         std::vector<char> file_buffer (file_size);
         if(!file.read(file_buffer.data(), file_size)) {
-            std::cerr << "Can not read image file \n";
+            std::cerr << "Can not read image file " + path + "\n";
             return;
         }
-        Server::image_header(new_fd, file_size);
+        Server::send_header(new_fd, type, file_size);
         send(new_fd, file_buffer.data(), file_size, 0);
     }
 
-    void Server::send_response(int new_fd) {
-        std::string body = load_home_page();
-        send_header(new_fd, body.size());
-        if(!body.empty()) {
-            send(new_fd, body.data(), body.size(), 0);
+    void Server::serve_html_file(int new_fd, const std::string& path) {
+        std::ifstream file(path, std::ios::binary | std::ios::ate);
+        if(!file) {
+            std::cerr << "Can not open file " + path + "\n";
+            return;
         }
+        std::streamsize file_size = file.tellg();
+        file.seekg(0, std::ios::beg);
+        std::vector<char> file_buffer (file_size);
+        if(!file.read(file_buffer.data(), file_size)) {
+            std::cerr << "Can not read file " + path + "\n";
+            return;
+        }
+        Server::send_header(new_fd, "text/html", file_size);
+        send(new_fd, file_buffer.data(), file_size, 0);
     }
 
     std::pair<std::string, bool> Server::read_request(int new_fd) {
@@ -293,12 +278,22 @@ namespace HTTP {
         if(path == "/" || path == "/index.html"){
             request = result.first;
             HTTP::Server::process_request(clientFD);
-            HTTP::Server::send_response(clientFD);
+            HTTP::Server::serve_html_file(clientFD, "./webpage/index.html");
         }
         if(path == "/cpp.png"){
             request = result.first;
             HTTP::Server::process_request(clientFD);
-            HTTP::Server::send_image(clientFD);
+            HTTP::Server::serve_binary_file(clientFD, "./webpage/cpp.png", "image/png");
+        }
+        if(path == "/style.css"){
+            request = result.first;
+            HTTP::Server::process_request(clientFD);
+            HTTP::Server::serve_binary_file(clientFD, "./webpage/style.css", "text/css");
+        }
+        if(path == "/script.js") {
+            request = result.first;
+            HTTP::Server::process_request(clientFD);
+            HTTP::Server::serve_binary_file(clientFD, "./webpage/script.js", "text/javascript");
         }
         close(clientFD);
         epoll_ctl(epollFD, EPOLL_CTL_DEL, clientFD, NULL);

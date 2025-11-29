@@ -1,0 +1,139 @@
+/* General Page Reset and Font */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5; /* Light gray background */
+    color: #333;
+    margin: 0;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* The Main Content Container */
+body > * {
+    /* This creates a specific width for readability */
+    max-width: 600px;
+    width: 100%;
+}
+
+/* Headings */
+h1 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+h2 {
+    color: #007bff; /* Blue accent color */
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 10px;
+    margin-top: 30px;
+}
+
+/* Profile Image Styling */
+img {
+    width: 100px;
+    height: 100px;
+    display: block;
+    margin: 20px auto;
+    border-radius: 50%; /* Makes the image circular */
+    border: 5px solid #ffffff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Adds a subtle shadow */
+    transition: transform 0.3s ease;
+}
+
+img:hover {
+    transform: scale(1.05); /* Slight zoom on hover */
+}
+
+/* Paragraphs */
+p {
+    line-height: 1.6;
+    text-align: center;
+    font-size: 1.1em;
+}
+
+/* Lists */
+ul {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    list-style-type: none; /* Remove default bullets */
+    text-align: center;
+}
+
+ul li {
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+ul li:last-child {
+    border-bottom: none;
+}
+
+/* Links */
+a {
+    text-decoration: none;
+    color: #007bff;
+    font-weight: 600;
+    margin: 0 10px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+a:hover {
+    background-color: #e7f1ff;
+    text-decoration: none;
+}
+
+/* --- Dark Mode Styles --- */
+
+/* This class is added/removed by JavaScript */
+body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+/* Update headings for dark mode */
+body.dark-mode h1,
+body.dark-mode h2 {
+    color: #ffffff;
+}
+
+/* Update the white list box background */
+body.dark-mode ul {
+    background-color: #1e1e1e;
+    box-shadow: 0 2px 5px rgba(255,255,255,0.05);
+    border: 1px solid #333;
+}
+
+body.dark-mode ul li {
+    border-bottom: 1px solid #333;
+}
+
+/* Lighten the links so they are readable on dark backgrounds */
+body.dark-mode a {
+    color: #64b5f6;
+}
+
+/* Style the Toggle Button */
+#theme-toggle {
+    display: block;
+    margin: 0 auto 20px auto; /* Centers the button */
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    transition: background-color 0.3s;
+}
+
+#theme-toggle:hover {
+    background-color: #0056b3;
+}

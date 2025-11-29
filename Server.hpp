@@ -5,7 +5,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-
+#include <string_view>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,11 +39,10 @@ namespace HTTP {
             std::string request;
 
             void setConncetion(void);
-            void send_header(int new_fd, size_t size);
-            void image_header(int new_fd, size_t size);
+            void send_header(int new_fd, std::string type, size_t size);
             void startListening(void);
-            void send_response(int new_fd);
-            void send_image(int new_fd);
+            void serve_binary_file(int new_fd, const std::string& path, const std::string& type);
+            void serve_html_file(int new_fd, const std::string& path);
             void handleNewConnection(int listenFD, int epollFD);
             void handleClientIO(int clientFD, uint32_t client_event);
             void process_request(int clientFD);
@@ -51,7 +50,6 @@ namespace HTTP {
             bool setSocketNonBlocking(int fd);
             const std::string get_in_addr(struct addrinfo& sa);
             std::pair<std::string, bool> read_request(int new_fd);
-            std::string load_home_page(void);
 
         public:
             struct ServerException : public CustomeExecption {
