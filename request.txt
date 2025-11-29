@@ -1,9 +1,0 @@
-GET / HTTP/1.1
-Host: 127.0.0.12:8080
-User-Agent: curl/7.88.1
-Accept: */*
-
-GET / HTTP/1.1
-Host: 127.0.0.12:8080
-User-Agent: curl/7.88.1
-Accept: */*

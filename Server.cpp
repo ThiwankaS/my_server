@@ -166,6 +166,31 @@ namespace HTTP {
         return (ss.str());
     }
 
+    void Server::image_header(int new_fd, size_t size) {
+        std::string header = "HTTP/1.1 200 OK\r\n";
+            header += "Content-Type: image/png\r\n";
+            header += "Content-Length: " + std::to_string(size) + "\r\n";
+            header += "Connection: close\r\n";
+            header += "\r\n";
+        send(new_fd, header.c_str(), header.size(), 0);
+    }
+
+    void Server::send_image(int new_fd) {
+        std::ifstream file("./webpage/cpp.png", std::ios::binary | std::ios::ate);
+        if(!file) {
+            std::cerr << "Can not open image file \n";
+        }
+        std::streamsize file_size = file.tellg();
+        file.seekg(0, std::ios::beg);
+        std::vector<char> file_buffer (file_size);
+        if(!file.read(file_buffer.data(), file_size)) {
+            std::cerr << "Can not read image file \n";
+            return;
+        }
+        Server::image_header(new_fd, file_size);
+        send(new_fd, file_buffer.data(), file_size, 0);
+    }
+
     void Server::send_response(int new_fd) {
         std::string body = load_home_page();
         send_header(new_fd, body.size());
@@ -174,10 +199,10 @@ namespace HTTP {
         }
     }
 
-    std::string Server::read_request(int new_fd) {
+    std::pair<std::string, bool> Server::read_request(int new_fd) {
         std::string out;
         char buffer[4096];
-        int bytes_read;
+        size_t bytes_read;
 
         while(true) {
             bytes_read = recv(new_fd, buffer, sizeof(buffer), 0);
@@ -198,7 +223,7 @@ namespace HTTP {
             out.clear();
             break;
         }
-        return (out);
+        return (std::make_pair(out, true));
     }
 
     void sigchild_handler(int s) {
@@ -257,20 +282,34 @@ namespace HTTP {
 
     void Server::handleClientIO(int clientFD, uint32_t client_event){
         (void) client_event;
-        if((request = read_request(clientFD)).empty()){
+        auto result = read_request(clientFD);
+        if(result.second == false || result.first.empty()){
             std::cerr << "Bad request!\n";
         }
-        HTTP::Server::process_request();
-        HTTP::Server::send_response(clientFD);
+        std::istringstream request_stream(result.first);
+        std::string method, path, version;
+
+        request_stream >> method >> path >> version;
+        if(path == "/" || path == "/index.html"){
+            request = result.first;
+            HTTP::Server::process_request(clientFD);
+            HTTP::Server::send_response(clientFD);
+        }
+        if(path == "/cpp.png"){
+            request = result.first;
+            HTTP::Server::process_request(clientFD);
+            HTTP::Server::send_image(clientFD);
+        }
         close(clientFD);
         epoll_ctl(epollFD, EPOLL_CTL_DEL, clientFD, NULL);
     }
 
-    void Server::process_request(void) {
+    void Server::process_request(int clientFD) {
+        (void) clientFD;
         std::cout << "Request in server side : \n"
                     << request << "\n";
         std::stringstream ss(request);
-        
+        std::cout << ss.str() << "\n";
     }
 }
 
