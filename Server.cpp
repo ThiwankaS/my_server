@@ -1,6 +1,9 @@
 #include "Server.hpp"
 
 namespace HTTP {
+    /**
+     * argument constructor to initialize and set class data
+    */
     Server::Server(const char* address, const char* p):
     sockfd(-1),
     port(p),
@@ -14,10 +17,16 @@ namespace HTTP {
         hints.ai_flags = AI_PASSIVE;
     };
 
+    /**
+     * destructor
+    */
     Server::~Server () {
         freeaddrinfo(servinfo);
     }
 
+    /**
+     * creating the connection between IP address and port
+    */
     void Server::setConncetion(void) {
         if(getaddrinfo(ip_address, port, &hints, &servinfo) != 0) {
             throw ServerException("Fail establishing connection !");
@@ -25,6 +34,10 @@ namespace HTTP {
         std::cout << "Connecetion sucessful....\n";
     }
 
+    /**
+     * binding the socket with the Ip address, will loop through all
+     * available socket and bind it with thge port
+    */
     int Server::createSocket(void) {
         struct addrinfo *p;
         int sockfd, yes = 1;
@@ -59,6 +72,9 @@ namespace HTTP {
         return (sockfd);
     }
 
+    /**
+     * will start to listen on the aloocated socket
+    */
     void Server::startListening(void) {
         if(listen(sockfd, BACKLOG) < 0) {
             throw ServerException("Fail to start listening!");
@@ -85,40 +101,54 @@ namespace HTTP {
     }
 
     void Server::startServer(void) {
-        std::ostringstream ss;
 
-        HTTP::Server::setConncetion();
-        sockfd = HTTP::Server::createSocket();
-        HTTP::Server::startListening();
+        std::ostringstream ss;                      //to display the srever status
+
+        HTTP::Server::setConncetion();              //connection establish
+        sockfd = HTTP::Server::createSocket();      //socket binded
+        HTTP::Server::startListening();             //start to liesten through the socket
+        HTTP::Server::setSocketNonBlocking(sockfd); //set the socket non-blocking
+        //signal handling
         sa.sa_handler = HTTP::sigchild_handler;
-        HTTP::Server::setSocketNonBlocking(sockfd);
         sigemptyset(&sa.sa_mask);
         sa.sa_flags = SA_RESTART;
         if(sigaction(SIGCHLD, &sa, NULL) == -1) {
                 throw ServerException("Failt to remove zombies!");
         }
-
+        // displaying the srever status
         ss << "server host at "
             << ip_address
             << " is listening on "
             << port;
         std::cout << ss.str() <<"\n";
 
-        struct epoll_event listen_event;
+        //creating a instance
         epollFD = epoll_create1(0);
         if(epollFD == -1) {
             throw ServerException("Epoll creation fail!");
         }
+
+        //define the behavior for the socket fd
+        struct epoll_event listen_event;
         listen_event.events = EPOLLIN | EPOLLET;
         listen_event.data.fd = sockfd;
 
-        if(epoll_ctl(epollFD, EPOLL_CTL_ADD, sockfd, &listen_event) == -1){
+        //add the fd to the epoll instance
+        if(epoll_ctl(epollFD, EPOLL_CTL_ADD, sockfd, &listen_event) == -1) {
+            close(epollFD);
             throw ServerException("Epoll ctl fail!");
         }
+
+        //cerate a epoll event vector with the size MAX_EVENT
         const int MAX_EVENT = 64;
         std::vector <struct epoll_event> events(MAX_EVENT);
 
         while(true) {
+            /**
+             * epoll wait will return the number of events ready following the
+             * events set above (EPOLLIN, EPOLLET) Thsi number can be anything
+             * in between 1 - 64(MAX_EVENT)
+            */
             int num_ready = epoll_wait(epollFD, events.data(), MAX_EVENT, -1);
 
             if(num_ready == -1){
@@ -127,18 +157,94 @@ namespace HTTP {
                 }
                 throw ServerException("Epoll wait fail!");
             }
-
+            /**
+             * iterate thorough all the rady events and check their FDs
+            */
             for(int i = 0; i < num_ready; i++){
                 int currentFD = events[i].data.fd;
                 uint32_t current_event = events[i].events;
+                //meaning a new client has connected
                 if(currentFD == sockfd){
                     HTTP::Server::handleNewConnection(sockfd, epollFD);
+                /**
+                 * meaning currentFD != sockfd so the currentFD is one already
+                 * existing in the epoll event instance. So no need to add the FD
+                 * back to the instance, can proceed with the request
+                */
                 } else {
                     HTTP::Server::handleClientIO(currentFD, current_event);
                 }
 
             }
         }
+    }
+
+    void Server::handleNewConnection(int listenFD, int epollFD) {
+        struct sockaddr_storage client_addr;
+
+        while (true) {
+            //Reset size for the new client
+            socklen_t size = sizeof(client_addr);
+            /**
+             * will accpet the new client and check it's FD
+            */
+            int newFD = accept(listenFD, (struct sockaddr*)&client_addr, &size);
+            if(newFD == -1) {
+                // only stop when the OS says "queue is empty"
+                if(errno == EAGAIN || errno == EWOULDBLOCK) {
+                    break;
+                }
+                std::cerr << strerror(errno) << "\n";
+                continue; //move to the next available client
+            }
+            //make new client FD non-blocking
+            if(!HTTP::Server::setSocketNonBlocking(newFD)) {
+                close(newFD);
+                continue;
+            }
+            //define the behavior for the new client
+            struct epoll_event event;
+            event.events = EPOLLIN | EPOLLET;
+            event.data.fd = newFD;
+            //adding the client fd to the epoll event instance
+            if(epoll_ctl(epollFD, EPOLL_CTL_ADD, newFD, &event) == -1){
+                std::cerr << "Epoll add client error!";
+                close(newFD);
+            }
+        }
+    }
+
+    void Server::handleClientIO(int clientFD, uint32_t client_event){
+        (void) client_event;
+        auto result = read_request(clientFD);
+        if(result.second == false || result.first.empty()){
+            std::cerr << "Bad request!\n";
+        }
+        std::istringstream request_stream(result.first);
+        std::string method, path, version;
+
+        request_stream >> method >> path >> version;
+        if(path == "/" || path == "/index.html"){
+            request = result.first;
+            HTTP::Server::process_request(clientFD);
+            HTTP::Server::serve_html_file(clientFD, "./webpage/index.html");
+        }
+        if(path == "/cpp.png"){
+            request = result.first;
+            HTTP::Server::process_request(clientFD);
+            HTTP::Server::serve_binary_file(clientFD, "./webpage/cpp.png", "image/png");
+        }
+        if(path == "/style.css"){
+            request = result.first;
+            HTTP::Server::process_request(clientFD);
+            HTTP::Server::serve_binary_file(clientFD, "./webpage/style.css", "text/css");
+        }
+        if(path == "/script.js") {
+            request = result.first;
+            HTTP::Server::process_request(clientFD);
+            HTTP::Server::serve_binary_file(clientFD, "./webpage/script.js", "text/javascript");
+        }
+        close(clientFD);
     }
 
     void Server::send_header(int new_fd, std::string type, size_t size) {
@@ -211,6 +317,9 @@ namespace HTTP {
         return (std::make_pair(out, true));
     }
 
+    /**
+     * classic signal handling for
+     */
     void sigchild_handler(int s) {
         (void)s;
         // caching the errno in case following processes over write
@@ -221,6 +330,9 @@ namespace HTTP {
         errno = saved_errno;
     }
 
+    /**
+     * make a scket non-blocking
+    */
     bool Server::setSocketNonBlocking(int fd) {
         int flags = fcntl(fd, F_GETFL, 0);
         if(flags == -1) {
@@ -233,70 +345,6 @@ namespace HTTP {
             return (false);
         }
         return (true);
-    }
-
-    void Server::handleNewConnection(int listenFD, int epollFD) {
-        struct sockaddr_storage client_addr;
-        socklen_t size = sizeof(client_addr);
-
-        while (true) {
-
-            int newFD = accept(listenFD, (struct sockaddr*)&client_addr, &size);
-            if(newFD == -1) {
-                if(errno == EAGAIN || errno == EWOULDBLOCK) {
-                    break;
-                }
-                std::cerr << strerror(errno) << "\n";
-                continue;
-            }
-            if(!HTTP::Server::setSocketNonBlocking(newFD)) {
-                close(newFD);
-                continue;
-            }
-
-            struct epoll_event event;
-            event.events = EPOLLIN | EPOLLET;
-            event.data.fd = newFD;
-
-            if(epoll_ctl(epollFD, EPOLL_CTL_ADD, newFD, &event) == -1){
-                std::cerr << "Epoll add client error!";
-                close(newFD);
-            }
-        }
-    }
-
-    void Server::handleClientIO(int clientFD, uint32_t client_event){
-        (void) client_event;
-        auto result = read_request(clientFD);
-        if(result.second == false || result.first.empty()){
-            std::cerr << "Bad request!\n";
-        }
-        std::istringstream request_stream(result.first);
-        std::string method, path, version;
-
-        request_stream >> method >> path >> version;
-        if(path == "/" || path == "/index.html"){
-            request = result.first;
-            HTTP::Server::process_request(clientFD);
-            HTTP::Server::serve_html_file(clientFD, "./webpage/index.html");
-        }
-        if(path == "/cpp.png"){
-            request = result.first;
-            HTTP::Server::process_request(clientFD);
-            HTTP::Server::serve_binary_file(clientFD, "./webpage/cpp.png", "image/png");
-        }
-        if(path == "/style.css"){
-            request = result.first;
-            HTTP::Server::process_request(clientFD);
-            HTTP::Server::serve_binary_file(clientFD, "./webpage/style.css", "text/css");
-        }
-        if(path == "/script.js") {
-            request = result.first;
-            HTTP::Server::process_request(clientFD);
-            HTTP::Server::serve_binary_file(clientFD, "./webpage/script.js", "text/javascript");
-        }
-        close(clientFD);
-        epoll_ctl(epollFD, EPOLL_CTL_DEL, clientFD, NULL);
     }
 
     void Server::process_request(int clientFD) {

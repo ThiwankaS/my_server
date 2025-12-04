@@ -64,6 +64,6 @@ namespace HTTP {
 
             void startServer(void);
     };
-
+    
     void sigchild_handler(int s);
 }
