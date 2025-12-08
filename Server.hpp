@@ -21,8 +21,12 @@
 #include <sys/epoll.h>
 #include <signal.h>
 #include <vector>
+#include <map>
 
 #include "CustomeException.hpp"
+#include "Request.hpp"
+#include "Response.hpp"
+#include "Utility.hpp"
 
 #define BACKLOG 10          // how many pending connections queue will hold
 
@@ -37,6 +41,7 @@ namespace HTTP {
             struct addrinfo *servinfo;
             struct sigaction sa;
             std::string request;
+            std::map<size_t, Client> active_clients;
 
             void setConncetion(void);
             void send_header(int new_fd, std::string type, size_t size);
@@ -49,7 +54,7 @@ namespace HTTP {
             int createSocket(void);
             bool setSocketNonBlocking(int fd);
             const std::string get_in_addr(struct addrinfo& sa);
-            std::pair<std::string, bool> read_request(int new_fd);
+            std::pair<bool, std::string> read_request(int new_fd);
 
         public:
             struct ServerException : public CustomeExecption {
@@ -61,9 +66,8 @@ namespace HTTP {
             Server& operator=(const Server& other) = delete;
             Server(const Server& other) = delete;
             ~Server();
-
             void startServer(void);
     };
-    
+
     void sigchild_handler(int s);
 }

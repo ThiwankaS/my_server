@@ -10,6 +10,9 @@ FLAGS	= $(WARN) $(STD)  -O0 -g
 
 SRCS	= \
 	CustomeException.cpp\
+	Utility.cpp\
+	Request.cpp\
+	Response.cpp\
 	Server.cpp\
 	main.cpp
 

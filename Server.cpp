@@ -211,38 +211,31 @@ namespace HTTP {
                 std::cerr << "Epoll add client error!";
                 close(newFD);
             }
+            // adding client to the active client list
+            Client new_client;
+            new_client.client_Fd    = newFD;
+            new_client.is_complete  = false;
+            new_client.buffer_data  = "";
+            active_clients.emplace(newFD, new_client);
         }
     }
 
     void Server::handleClientIO(int clientFD, uint32_t client_event){
-        (void) client_event;
+
+        if(client_event & (EPOLLHUP | EPOLLERR)){
+            close(clientFD);
+            return;
+        }
+
         auto result = read_request(clientFD);
-        if(result.second == false || result.first.empty()){
+        if(result.first == false || result.second.empty()){
             std::cerr << "Bad request!\n";
         }
-        std::istringstream request_stream(result.first);
-        std::string method, path, version;
 
-        request_stream >> method >> path >> version;
-        if(path == "/" || path == "/index.html"){
-            request = result.first;
-            HTTP::Server::process_request(clientFD);
-            HTTP::Server::serve_html_file(clientFD, "./webpage/index.html");
-        }
-        if(path == "/cpp.png"){
-            request = result.first;
-            HTTP::Server::process_request(clientFD);
-            HTTP::Server::serve_binary_file(clientFD, "./webpage/cpp.png", "image/png");
-        }
-        if(path == "/style.css"){
-            request = result.first;
-            HTTP::Server::process_request(clientFD);
-            HTTP::Server::serve_binary_file(clientFD, "./webpage/style.css", "text/css");
-        }
-        if(path == "/script.js") {
-            request = result.first;
-            HTTP::Server::process_request(clientFD);
-            HTTP::Server::serve_binary_file(clientFD, "./webpage/script.js", "text/javascript");
+        Client& client = active_clients[clientFD];
+        client.addToBuffer(result.second);
+        if(client.is_complete) {
+            Data client_data = Request::parse_request(client);
         }
         close(clientFD);
     }
@@ -290,31 +283,28 @@ namespace HTTP {
         send(new_fd, file_buffer.data(), file_size, 0);
     }
 
-    std::pair<std::string, bool> Server::read_request(int new_fd) {
+    std::pair<bool, std::string> Server::read_request(int new_fd) {
         std::string out;
         char buffer[4096];
-        size_t bytes_read;
+        ssize_t bytes_read;
 
         while(true) {
             bytes_read = recv(new_fd, buffer, sizeof(buffer), 0);
-            if(bytes_read > 0) {
-                out.append(buffer, bytes_read);
-                if(out.find("\r\n\r\n") != std::string::npos){
+            if(bytes_read == -1) {
+                if(errno == EINTR) {
+                    continue;
+                }
+                if(errno == EAGAIN || errno == EWOULDBLOCK) {
                     break;
                 }
-                continue;
+                return (std::make_pair(false, ""));
             }
             if(bytes_read == 0) {
-                break;
+                return (std::make_pair(false, ""));
             }
-            if(errno == EINTR)
-                continue;
-            if(errno == EAGAIN || errno == EWOULDBLOCK)
-                break;
-            out.clear();
-            break;
+            out.append(buffer, bytes_read);
         }
-        return (std::make_pair(out, true));
+        return (std::make_pair(true, out));
     }
 
     /**
