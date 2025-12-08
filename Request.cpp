@@ -1,7 +1,7 @@
 #include "Request.hpp"
 
 Request::Request(Client &client) {
-    Data request_data = parse_request(client);
+    RequestData request_data = parse_request(client);
 }
 
 std::vector<std::string> Request::slplit(std::string& str, std::string_view delimeter) {
@@ -67,7 +67,7 @@ std::string Request::setHost(const std::vector<std::string>& lines) {
     return ("");
 }
 
-Data Request::parse_request(Client& client) {
+RequestData Request::parse_request(Client& client) {
 
     std::vector<std::string> sections   = slplit(client.buffer_data, "\r\n\r\n");
     std::string& header = sections.at(0);
@@ -77,7 +77,7 @@ Data Request::parse_request(Client& client) {
     std::string method, path, version;
     request_stream >> method >> path >> version;
 
-    Data client_data;
+    RequestData client_data;
     client_data.http_method     = setMethod(method);
     client_data.http_version    = setVersion(version);
     client_data.is_keep_alive   = setConnection(lines);
@@ -88,7 +88,7 @@ Data Request::parse_request(Client& client) {
     } else {
         client_data.body        = "";
     }
-
+    client_data.is_valid        = true;
     return (client_data);
 
         // if(path == "/" || path == "/index.html"){

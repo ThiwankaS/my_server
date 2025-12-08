@@ -13,6 +13,7 @@ SRCS	= \
 	Utility.cpp\
 	Request.cpp\
 	Response.cpp\
+	Router.cpp\
 	Server.cpp\
 	main.cpp
 

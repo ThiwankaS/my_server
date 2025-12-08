@@ -216,7 +216,7 @@ namespace HTTP {
             new_client.client_Fd    = newFD;
             new_client.is_complete  = false;
             new_client.buffer_data  = "";
-            active_clients.emplace(newFD, new_client);
+            active_clients[newFD] = new_client;
         }
     }
 
@@ -235,9 +235,12 @@ namespace HTTP {
         Client& client = active_clients[clientFD];
         client.addToBuffer(result.second);
         if(client.is_complete) {
-            Data client_data = Request::parse_request(client);
+            RequestData client_data = Request::parse_request(client);
+            ResponseData res = Router::route(client_data);
+            Response::sendResponse(clientFD, res);
+            close(clientFD);
+            active_clients.erase(clientFD);
         }
-        close(clientFD);
     }
 
     void Server::send_header(int new_fd, std::string type, size_t size) {

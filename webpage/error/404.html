@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found</title>
+    <style>
+        /* --- YOUR CSS STYLES --- */
+
+        /* General Page Reset and Font */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s; /* Added smooth transition for theme switch */
+        }
+
+        /* The Main Content Container */
+        body > * {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        /* Headings */
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: #007bff;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+
+        /* Profile Image Styling (Used here for the 404 Mascot) */
+        img {
+            width: 100px;
+            height: 100px;
+            display: block;
+            margin: 20px auto;
+            border-radius: 50%;
+            border: 5px solid #ffffff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            background-color: #ddd; /* Fallback color */
+        }
+
+        img:hover {
+            transform: scale(1.05);
+        }
+
+        /* Paragraphs */
+        p {
+            line-height: 1.6;
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        /* Lists */
+        ul {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            list-style-type: none;
+            text-align: center;
+        }
+
+        ul li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        ul li:last-child {
+            border-bottom: none;
+        }
+
+        /* Links */
+        a {
+            text-decoration: none;
+            color: #007bff;
+            font-weight: 600;
+            margin: 0 10px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        a:hover {
+            background-color: #e7f1ff;
+            text-decoration: none;
+        }
+
+        /* --- Dark Mode Styles --- */
+        body.dark-mode {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode h1,
+        body.dark-mode h2 {
+            color: #ffffff;
+        }
+
+        body.dark-mode ul {
+            background-color: #1e1e1e;
+            box-shadow: 0 2px 5px rgba(255,255,255,0.05);
+            border: 1px solid #333;
+        }
+
+        body.dark-mode ul li {
+            border-bottom: 1px solid #333;
+        }
+
+        body.dark-mode a {
+            color: #64b5f6;
+        }
+
+        body.dark-mode a:hover {
+            background-color: #2c2c2c;
+        }
+
+        /* Style the Toggle Button */
+        #theme-toggle {
+            display: block;
+            margin: 0 auto 20px auto;
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            transition: background-color 0.3s;
+        }
+
+        #theme-toggle:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="theme-toggle">🌙 Switch to Dark Mode</button>
+
+    <h1>404: Lost in Space</h1>
+
+    <img src="https://robohash.org/404-error?set=set1&bgset=bg1" alt="Confused Robot">
+
+    <p><strong>Whoops!</strong> It looks like you've stumbled into a digital black hole.</p>
+    <p>The page you are looking for has been moved, deleted, or possibly never existed.</p>
+
+    <h2>Where to go from here</h2>
+
+    <ul>
+        <li><a href="/">Return to Homepage</a></li>
+        <li><a href="#">Search our Archives</a></li>
+        <li><a href="#">Contact Support</a></li>
+    </ul>
+
+    <script>
+        const toggleBtn = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        // Check for saved user preference, if any, on load
+        const currentTheme = localStorage.getItem('theme');
+        if (currentTheme == 'dark') {
+            body.classList.add('dark-mode');
+            toggleBtn.textContent = '☀️ Switch to Light Mode';
+        }
+
+        toggleBtn.addEventListener('click', function() {
+            body.classList.toggle('dark-mode');
+
+            let theme = 'light';
+            if (body.classList.contains('dark-mode')) {
+                theme = 'dark';
+                toggleBtn.textContent = '☀️ Switch to Light Mode';
+            } else {
+                toggleBtn.textContent = '🌙 Switch to Dark Mode';
+            }
+            // Save preference
+            localStorage.setItem('theme', theme);
+        });
+    </script>
+</body>
+</html>
