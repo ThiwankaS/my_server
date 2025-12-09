@@ -284,7 +284,6 @@ namespace HTTP {
                 if(errno == EAGAIN || errno == EWOULDBLOCK) {
                     break;
                 }
-                return (std::make_pair(false, ""));
             }
             if(bytes_read == 0) {
                 return (std::make_pair(false, ""));

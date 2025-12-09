@@ -1,139 +1,146 @@
-/* General Page Reset and Font */
+/* --- IMPORT FONT --- */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bitcount+Prop+Double+Ink:wght@400;500;600;700&display=swap');
+
+:root {
+    --deep-space: #2e003e;
+    --star-white: #ffffff;
+    --rocket-orange: #ff9f43;
+    --meteor-pink: #ff4757;
+    --planet-blue: #0abde3;
+
+    /* Color and adujusting transparency */
+    --glass-bg: rgba(46, 0, 62, 0.45);
+}
+
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f0f2f5; /* Light gray background */
-    color: #333;
+    background-color: var(--deep-space);
+    background-image: url('images/background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    color: var(--star-white);
+    font-family: 'Nunito', sans-serif;
     margin: 0;
-    padding: 40px 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
+    padding: 20px;
+    line-height: 1.6;
 }
 
-/* The Main Content Container */
-body > * {
-    /* This creates a specific width for readability */
-    max-width: 600px;
-    width: 100%;
-}
-
-/* Headings */
-h1 {
-    color: #2c3e50;
-    text-align: center;
-    margin-bottom: 10px;
-}
-
-h2 {
-    color: #007bff; /* Blue accent color */
-    border-bottom: 2px solid #e9ecef;
-    padding-bottom: 10px;
-    margin-top: 30px;
-}
-
-/* Profile Image Styling */
-img {
-    width: 100px;
-    height: 100px;
+/* --- LOGO STYLING --- */
+.logo-img {
     display: block;
-    margin: 20px auto;
-    border-radius: 50%; /* Makes the image circular */
-    border: 5px solid #ffffff;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Adds a subtle shadow */
+    max-width: 150px;
+    margin: 0 auto 20px auto;
+    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
     transition: transform 0.3s ease;
 }
 
-img:hover {
-    transform: scale(1.05); /* Slight zoom on hover */
-}
-
-/* Paragraphs */
-p {
-    line-height: 1.6;
-    text-align: center;
-    font-size: 1.1em;
-}
-
-/* Lists */
-ul {
-    background: #ffffff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    list-style-type: none; /* Remove default bullets */
+nav {
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 15px;
+    border-radius: 15px;
     text-align: center;
 }
 
-ul li {
-    padding: 8px 0;
-    border-bottom: 1px solid #f1f1f1;
-}
-
-ul li:last-child {
-    border-bottom: none;
-}
-
-/* Links */
-a {
+nav a {
+    color: var(--star-white);
+    margin: 0 15px;
     text-decoration: none;
-    color: #007bff;
-    font-weight: 600;
-    margin: 0 10px;
-    padding: 5px 10px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: color 0.3s ease;
 }
 
-a:hover {
-    background-color: #e7f1ff;
-    text-decoration: none;
+nav a:hover {
+    color: var(--rocket-orange);
+    text-shadow: 0 0 10px rgba(255, 159, 67, 0.6);
 }
 
-/* --- Dark Mode Styles --- */
-
-/* This class is added/removed by JavaScript */
-body.dark-mode {
-    background-color: #121212;
-    color: #e0e0e0;
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 40px;
+    border-radius: 30px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
-/* Update headings for dark mode */
-body.dark-mode h1,
-body.dark-mode h2 {
-    color: #ffffff;
+h1, h2, h3 {
+    font-family: 'Bitcount Prop Double Ink', serif;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    background: linear-gradient(to right, var(--rocket-orange), var(--meteor-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 5px rgba(255, 159, 67, 0.3));
 }
 
-/* Update the white list box background */
-body.dark-mode ul {
-    background-color: #1e1e1e;
-    box-shadow: 0 2px 5px rgba(255,255,255,0.05);
-    border: 1px solid #333;
-}
-
-body.dark-mode ul li {
-    border-bottom: 1px solid #333;
-}
-
-/* Lighten the links so they are readable on dark backgrounds */
-body.dark-mode a {
-    color: #64b5f6;
-}
-
-/* Style the Toggle Button */
-#theme-toggle {
-    display: block;
-    margin: 0 auto 20px auto; /* Centers the button */
-    padding: 10px 20px;
-    font-size: 1rem;
-    cursor: pointer;
-    background-color: #007bff;
+button {
+    background: linear-gradient(135deg, var(--rocket-orange), var(--meteor-pink));
     color: white;
     border: none;
-    border-radius: 20px;
-    transition: background-color 0.3s;
+    padding: 12px 30px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 900;
+    font-size: 1.1rem;
+    border-radius: 50px;
+    box-shadow: 0 5px 15px rgba(255, 71, 87, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: block;
+    margin: 20px auto;
 }
 
-#theme-toggle:hover {
-    background-color: #0056b3;
+button:hover {
+    opacity: 1;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(255, 71, 87, 0.6);
+}
+
+input, select {
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: white;
+    padding: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 15px;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--planet-blue);
+}
+
+/* --- MOBILE SPECIFIC TWEAKS --- */
+@media (max-width: 600px) {
+    body {
+        padding: 10px;
+    }
+
+    nav a {
+        display: block;
+        margin: 10px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-bottom: 5px;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    .container {
+        width: 100%;
+        padding: 20px;
+        box-sizing: border-box;
+    }
 }

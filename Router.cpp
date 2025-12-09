@@ -30,6 +30,9 @@ std::string Router::setContentType(std::string& path) {
     if(path.find(".js") != std::string::npos){
             return("text/javascript");
     }
+    if(path.find(".jpg") != std::string::npos){
+            return("image/jpeg");
+    }
     return ("text/html;charset=utf-8");
 }
 
@@ -38,13 +41,12 @@ ResponseData Router::route(const RequestData& client_data) {
 
     std::string root = "./webpage";
     std::string path = root + client_data.path;
-    std::string error_path = root + "/error/404.html";
+    std::string error_path = root + "/errors/404.html";
 
     if(!client_data.is_valid || client_data.http_method == METHOD::UNKNOWN) {
         res.buffer              = getFileBuffer(error_path);
         res.status_code         = "404 Not Found";
         res.content_type        = "text/html; charset=utf-8";
-
     }
 
     struct stat s;
