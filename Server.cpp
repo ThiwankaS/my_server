@@ -216,7 +216,28 @@ namespace HTTP {
             new_client.client_Fd    = newFD;
             new_client.is_complete  = false;
             new_client.buffer_data  = "";
-            active_clients[newFD] = new_client;
+
+            auto result = read_request(newFD);
+            if(result.first == false){
+                std::cerr << "Bad request!\n";
+                close(newFD);
+                continue;
+            }
+            //request = result.second;
+            //Server::process_request(newFD);
+            new_client.addToBuffer(result.second);
+            if(new_client.is_complete){
+                RequestData client_data = Request::parse_request(new_client);
+                ResponseData res = Router::route(client_data);
+                Response::sendResponse(newFD, res);
+                if(client_data.is_keep_alive){
+                    active_clients[newFD] = new_client;
+                } else {
+                    close(newFD);
+                }
+            } else {
+                 active_clients[newFD] = new_client;
+            }
         }
     }
 
@@ -228,62 +249,25 @@ namespace HTTP {
         }
 
         auto result = read_request(clientFD);
-        if(result.first == false || result.second.empty()){
+        if(result.first == false){
             std::cerr << "Bad request!\n";
+            close(clientFD);
+            active_clients.erase(clientFD);
+            return;
         }
-
+        // request = result.second;
+        // Server::process_request(clientFD);
         Client& client = active_clients[clientFD];
         client.addToBuffer(result.second);
         if(client.is_complete) {
             RequestData client_data = Request::parse_request(client);
             ResponseData res = Router::route(client_data);
             Response::sendResponse(clientFD, res);
-            close(clientFD);
-            active_clients.erase(clientFD);
+            if(!client_data.is_keep_alive){
+                close(clientFD);
+                active_clients.erase(clientFD);
+            }
         }
-    }
-
-    void Server::send_header(int new_fd, std::string type, size_t size) {
-        std::string header = "HTTP/1.1 200 OK\r\n";
-            header += "Content-Type: " + type + "\r\n";
-            header += "Content-Length: " + std::to_string(size) + "\r\n";
-            header += "Connection: close\r\n";
-            header += "\r\n";
-        send(new_fd, header.c_str(), header.size(), 0);
-    }
-
-    void Server::serve_binary_file(int new_fd, const std::string& path, const std::string& type) {
-        std::ifstream file(path, std::ios::binary | std::ios::ate);
-        if(!file) {
-            std::cerr << "Can not open image file " + path + "\n";
-            return;
-        }
-        std::streamsize file_size = file.tellg();
-        file.seekg(0, std::ios::beg);
-        std::vector<char> file_buffer (file_size);
-        if(!file.read(file_buffer.data(), file_size)) {
-            std::cerr << "Can not read image file " + path + "\n";
-            return;
-        }
-        Server::send_header(new_fd, type, file_size);
-        send(new_fd, file_buffer.data(), file_size, 0);
-    }
-
-    void Server::serve_html_file(int new_fd, const std::string& path) {
-        std::ifstream file(path, std::ios::binary | std::ios::ate);
-        if(!file) {
-            std::cerr << "Can not open file " + path + "\n";
-            return;
-        }
-        std::streamsize file_size = file.tellg();
-        file.seekg(0, std::ios::beg);
-        std::vector<char> file_buffer (file_size);
-        if(!file.read(file_buffer.data(), file_size)) {
-            std::cerr << "Can not read file " + path + "\n";
-            return;
-        }
-        Server::send_header(new_fd, "text/html", file_size);
-        send(new_fd, file_buffer.data(), file_size, 0);
     }
 
     std::pair<bool, std::string> Server::read_request(int new_fd) {

@@ -71,6 +71,7 @@ RequestData Request::parse_request(Client& client) {
 
     std::vector<std::string> sections   = slplit(client.buffer_data, "\r\n\r\n");
     std::string& header = sections.at(0);
+    client.clearAndUpdateBuffer("");
     std::vector<std::string> lines      = slplit(header, "\r\n");
 
     std::istringstream request_stream(lines.at(0));

@@ -59,6 +59,7 @@ struct Client {
 
     void clearAndUpdateBuffer(std::string str) {
         buffer_data.clear();
+        is_complete = false;
         addToBuffer(str);
     }
 };

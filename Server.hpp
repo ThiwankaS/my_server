@@ -22,10 +22,7 @@ namespace HTTP {
             std::map<size_t, Client> active_clients;
 
             void setConncetion(void);
-            void send_header(int new_fd, std::string type, size_t size);
             void startListening(void);
-            void serve_binary_file(int new_fd, const std::string& path, const std::string& type);
-            void serve_html_file(int new_fd, const std::string& path);
             void handleNewConnection(int listenFD, int epollFD);
             void handleClientIO(int clientFD, uint32_t client_event);
             void process_request(int clientFD);
