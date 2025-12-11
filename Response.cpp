@@ -1,7 +1,8 @@
 #include "Response.hpp"
 
-void Response::sendHeader(int client_fd, const ResponseData& res) {
+std::string Response::buildHeader(Client& client) {
     std::ostringstream os;
+    const ResponseData& res = client.response;
 
     os << "HTTP/1.1 " << res.status_code << "\r\n"
         << "Content-Type: " + res.content_type + "\r\n"
@@ -10,10 +11,25 @@ void Response::sendHeader(int client_fd, const ResponseData& res) {
         << "\r\n";
 
     std::string header = os.str();
-    send(client_fd, header.c_str(), header.size(), 0);
+    return (header);
 }
 
-void Response::sendResponse(int client_fd, const ResponseData& res) {
-    sendHeader(client_fd, res);
-    send(client_fd, res.buffer.data(), res.buffer.size(), 0);
+void Response::buildResponse(Client& client) {
+    const ResponseData& res = client.response;
+
+    client.addToResponseBuffer(buildHeader(client));
+    client.addToResponseBuffer(std::string(res.buffer.begin(), res.buffer.end()));
+}
+
+void Response::sendResponse(Client& client) {
+    if(!client.isResponseCompleted()) {
+        client.size_sent += send(
+            client.client_Fd, 
+            client.response_buffer.c_str() + client.size_sent,
+            client.response_buffer.size() - client.size_sent, 0); 
+    }
+    if(client.isResponseCompleted()) {
+        client.clearAndUpdateResponseBuffer("");
+        client.size_sent = 0;
+    }
 }

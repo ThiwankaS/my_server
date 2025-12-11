@@ -7,5 +7,5 @@ class Router {
         static std::vector<char> getFileBuffer(const std::string& path);
         static std::string setContentType(std::string& path);
     public :
-        static ResponseData route(const RequestData& client_data);
+        static Client route(Client& client);
 };

@@ -4,6 +4,7 @@
 
 class Response {
     public :
-        static void sendResponse(int client_fd, const ResponseData& res);
-        static void sendHeader(int new_client_fdfd, const ResponseData& res);
+        static std::string buildHeader(Client& client);
+        static void buildResponse(Client& client);
+        static void sendResponse(Client& client);
 };

@@ -81,7 +81,7 @@ namespace HTTP {
         }
     }
 
-    const std::string Server::get_in_addr(struct addrinfo& sa) {
+    const std::string Server::getInAddr(struct addrinfo& sa) {
         char s[INET6_ADDRSTRLEN];
         const char* address = nullptr;
 
@@ -163,18 +163,26 @@ namespace HTTP {
             for(int i = 0; i < num_ready; i++){
                 int currentFD = events[i].data.fd;
                 uint32_t current_event = events[i].events;
+
                 //meaning a new client has connected
+
                 if(currentFD == sockfd){
                     HTTP::Server::handleNewConnection(sockfd, epollFD);
-                /**
-                 * meaning currentFD != sockfd so the currentFD is one already
-                 * existing in the epoll event instance. So no need to add the FD
-                 * back to the instance, can proceed with the request
-                */
-                } else {
-                    HTTP::Server::handleClientIO(currentFD, current_event);
                 }
 
+                if(current_event & (EPOLLHUP | EPOLLERR)) {
+                    close(currentFD);
+                    active_clients.erase(currentFD);
+                    continue;
+                }
+
+                if( current_event & EPOLLIN) {
+                    HTTP::Server::handleClientRead(currentFD, epollFD);
+                }
+
+                if( current_event & EPOLLOUT) {
+                    HTTP::Server::handleClientWrite(currentFD, epollFD);
+                }
             }
         }
     }
@@ -194,7 +202,7 @@ namespace HTTP {
                 if(errno == EAGAIN || errno == EWOULDBLOCK) {
                     break;
                 }
-                std::cerr << strerror(errno) << "\n";
+                std::cerr << "Accept error :" << strerror(errno) << "\n";
                 continue; //move to the next available client
             }
             //make new client FD non-blocking
@@ -202,95 +210,135 @@ namespace HTTP {
                 close(newFD);
                 continue;
             }
+
+            // adding client to the active client list
+            Client client(newFD);
+            active_clients.insert({ client.client_Fd, client });
+
             //define the behavior for the new client
             struct epoll_event event;
             event.events = EPOLLIN | EPOLLET;
             event.data.fd = newFD;
+
             //adding the client fd to the epoll event instance
             if(epoll_ctl(epollFD, EPOLL_CTL_ADD, newFD, &event) == -1){
                 std::cerr << "Epoll add client error!";
+                active_clients.erase(newFD);
                 close(newFD);
-            }
-            // adding client to the active client list
-            Client new_client;
-            new_client.client_Fd    = newFD;
-            new_client.is_complete  = false;
-            new_client.buffer_data  = "";
-
-            auto result = read_request(newFD);
-            if(result.first == false){
-                std::cerr << "Bad request!\n";
-                close(newFD);
-                continue;
-            }
-            //request = result.second;
-            //Server::process_request(newFD);
-            new_client.addToBuffer(result.second);
-            if(new_client.is_complete){
-                RequestData client_data = Request::parse_request(new_client);
-                ResponseData res = Router::route(client_data);
-                Response::sendResponse(newFD, res);
-                if(client_data.is_keep_alive){
-                    active_clients[newFD] = new_client;
-                } else {
-                    close(newFD);
-                }
-            } else {
-                 active_clients[newFD] = new_client;
             }
         }
     }
 
-    void Server::handleClientIO(int clientFD, uint32_t client_event){
+    void Server::handleClientRead(int clientFD, int epollFD) {
 
-        if(client_event & (EPOLLHUP | EPOLLERR)){
-            close(clientFD);
-            return;
+        auto it = active_clients.find(clientFD);
+        if(it == active_clients.end()) {
+            return;   
         }
 
-        auto result = read_request(clientFD);
-        if(result.first == false){
-            std::cerr << "Bad request!\n";
-            close(clientFD);
+        Client& client = it->second;
+
+        auto result = readRequest(clientFD);
+        if(result.first == false && result.second.empty()){
             active_clients.erase(clientFD);
+            close(clientFD);
             return;
         }
-        // request = result.second;
-        // Server::process_request(clientFD);
-        Client& client = active_clients[clientFD];
-        client.addToBuffer(result.second);
+
+        client.addToRequestBuffer(result.second);
+        client.size_recv += result.second.size();
+
         if(client.is_complete) {
-            RequestData client_data = Request::parse_request(client);
-            ResponseData res = Router::route(client_data);
-            Response::sendResponse(clientFD, res);
-            if(!client_data.is_keep_alive){
-                close(clientFD);
-                active_clients.erase(clientFD);
-            }
+            client = Request::parse_request(client);
+            client = Router::route(client);
+            Response::buildResponse(client);
+            struct epoll_event event;
+            event.events = EPOLLIN | EPOLLET | EPOLLOUT;
+            event.data.fd = clientFD;
+            epoll_ctl(epollFD, EPOLL_CTL_MOD, clientFD, &event);
         }
     }
 
-    std::pair<bool, std::string> Server::read_request(int new_fd) {
+    std::pair<bool, std::string> Server::readRequest(int new_fd) {
         std::string out;
         char buffer[4096];
-        ssize_t bytes_read;
 
         while(true) {
-            bytes_read = recv(new_fd, buffer, sizeof(buffer), 0);
+            ssize_t bytes_read = recv(new_fd, buffer, sizeof(buffer), 0);
+            
             if(bytes_read == -1) {
                 if(errno == EINTR) {
                     continue;
                 }
                 if(errno == EAGAIN || errno == EWOULDBLOCK) {
-                    break;
+                    return (std::make_pair(true, out));
                 }
+                return (std::make_pair(false, ""));
             }
             if(bytes_read == 0) {
                 return (std::make_pair(false, ""));
             }
             out.append(buffer, bytes_read);
         }
-        return (std::make_pair(true, out));
+    }
+
+    void Server::handleClientWrite(int clientFD, int epollFD) {
+
+        auto it = active_clients.find(clientFD);
+        
+        if(it == active_clients.end()) {
+            return;   
+        }
+
+        Client& client = it->second;
+
+        bool keep_alive = sendRequest(clientFD);
+        
+        if(client.isResponseCompleted()) {
+            if(!keep_alive) {
+                 active_clients.erase(clientFD);
+                close(clientFD);
+            } else {
+                client.clearAndUpdateResponseBuffer("");
+                client.size_sent = 0;
+                client.is_complete = false;
+
+                struct epoll_event event;
+                event.events = EPOLLIN | EPOLLET;
+                event.data.fd = clientFD;
+                epoll_ctl(epollFD, EPOLL_CTL_MOD, clientFD, &event); 
+            }
+        }
+    }
+
+    bool Server::sendRequest(int new_fd) {
+        
+        auto it = active_clients.find(new_fd);
+        if(it == active_clients.end()){
+            std::runtime_error("Client connection lost!");
+        }
+
+        Client& client = it->second;
+        ssize_t bytes_write;
+
+        while(!client.isResponseCompleted()) {
+
+            const char* data_ptr = client.response_buffer.c_str() + client.size_sent;
+            size_t remaining = client.response_buffer.size() - client.size_sent;
+
+            bytes_write = send(client.client_Fd, data_ptr, remaining, 0);
+            if(bytes_write == -1) {
+                if(errno == EINTR) {
+                    continue;
+                }
+                if(errno == EAGAIN || errno == EWOULDBLOCK) {
+                    break;
+                }
+                return (false);
+            }    
+            client.size_sent += bytes_write;                
+        }
+        return (client.request.is_keep_alive);
     }
 
     /**

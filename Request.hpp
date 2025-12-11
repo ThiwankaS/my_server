@@ -7,7 +7,7 @@ class Request {
         std::string http_version = "HTTP/1.1";
     public:
         Request(Client& client);
-        static RequestData parse_request(Client& client);
+        static Client parse_request(Client& client);
         static std::vector<std::string> slplit(std::string& str, std::string_view delimeter);
         static METHOD setMethod(const std::string& method);
         static VERSION setVersion(const std::string& version);

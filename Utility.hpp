@@ -45,24 +45,68 @@ enum class VERSION {
     UNKNOWN
 };
 
-struct Client {
-    size_t      client_Fd;
-    bool        is_complete;
-    std::string buffer_data;
-    std::string response_buffer;
-    size_t      size_data_sent;
+struct RequestData {
+    METHOD      http_method;
+    VERSION     http_version;
+    std::string path;
+    std::string host;
+    std::string body;
+    bool        is_keep_alive;
+    bool        is_valid;
 
-    void addToBuffer(std::string str) {
-        buffer_data.append(str);
-        if(buffer_data.find("\r\n\r\n") != std::string::npos){
+    RequestData() {
+        http_method     = METHOD::UNKNOWN;
+        http_version    = VERSION::UNKNOWN;
+        path = "";
+        host = "";
+        body = "";
+        is_keep_alive = false;
+        is_valid      = false;
+    }
+};
+
+struct ResponseData {
+    std::string         status_code;
+    std::string         content_type;
+    std::vector<char>   buffer;
+
+    ResponseData() {
+        status_code = "";
+        content_type = "";
+    }
+};
+
+struct Client {
+    size_t          client_Fd;
+    bool            is_complete;
+    std::string     request_buffer;
+    std::string     response_buffer;
+    size_t          size_sent;
+    size_t          size_recv;
+    ResponseData    response;
+    RequestData     request;
+
+    Client(size_t newFD) : client_Fd(newFD), 
+        is_complete(false), 
+        request_buffer(""),
+        response_buffer(""),
+        size_sent(0),
+        size_recv(0),
+        response (),
+        request  () {
+    }
+
+    void addToRequestBuffer(std::string str) {
+        request_buffer.append(str);
+        if(request_buffer.find("\r\n\r\n") != std::string::npos){
             is_complete = true;
         }
     }
 
-    void clearAndUpdateBuffer(std::string str) {
-        buffer_data.clear();
+    void clearAndUpdateRequestBuffer(std::string str) {
+        request_buffer.clear();
         is_complete = false;
-        addToBuffer(str);
+        addToRequestBuffer(str);
     }
 
     void addToResponseBuffer(std::string str) {
@@ -75,24 +119,9 @@ struct Client {
     }
 
     bool isResponseCompleted(void) {
-        if (size_data_sent >= response_buffer.size()) {
+        if (size_sent >= response_buffer.size()) {
             return (true);
         }
+        return (false);
     }
-};
-
-struct RequestData {
-    METHOD      http_method;
-    VERSION     http_version;
-    std::string path;
-    std::string host;
-    std::string body;
-    bool        is_keep_alive;
-    bool        is_valid;
-};
-
-struct ResponseData {
-    std::string         status_code;
-    std::string         content_type;
-    std::vector<char>   buffer;
 };

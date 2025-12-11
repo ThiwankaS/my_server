@@ -36,17 +36,16 @@ std::string Router::setContentType(std::string& path) {
     return ("text/html;charset=utf-8");
 }
 
-ResponseData Router::route(const RequestData& client_data) {
-    ResponseData res;
+Client Router::route(Client& client) {
 
     std::string root = "./webpage";
-    std::string path = root + client_data.path;
+    std::string path = root + client.request.path;
     std::string error_path = root + "/errors/404.html";
 
-    if(!client_data.is_valid || client_data.http_method == METHOD::UNKNOWN) {
-        res.buffer              = getFileBuffer(error_path);
-        res.status_code         = "404 Not Found";
-        res.content_type        = "text/html; charset=utf-8";
+    if(!client.request.is_valid || client.request.http_method == METHOD::UNKNOWN) {
+        client.response.buffer              = getFileBuffer(error_path);
+        client.response.status_code         = "404 Not Found";
+        client.response.content_type        = "text/html; charset=utf-8";
     }
 
     struct stat s;
@@ -57,17 +56,17 @@ ResponseData Router::route(const RequestData& client_data) {
     }
 
     std::ifstream file_check(path.c_str());
-    if(client_data.http_method == METHOD::GET){
+    if(client.request.http_method == METHOD::GET){
         if(file_check.good()){
             file_check.close();
-            res.buffer          = getFileBuffer(path);
-            res.status_code     = "200 OK";
-            res.content_type    = setContentType(path);
+            client.response.buffer          = getFileBuffer(path);
+            client.response.status_code     = "200 OK";
+            client.response.content_type    = setContentType(path);
         } else {
-            res.buffer          = getFileBuffer(error_path);
-            res.status_code     = "404 Not Found";
-            res.content_type    = "text/html; charset=utf-8";
+            client.response.buffer          = getFileBuffer(error_path);
+            client.response.status_code     = "404 Not Found";
+            client.response.content_type    = "text/html; charset=utf-8";
         }
     }
-    return (res);
+    return (client);
 }

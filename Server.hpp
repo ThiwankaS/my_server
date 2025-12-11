@@ -24,12 +24,14 @@ namespace HTTP {
             void setConncetion(void);
             void startListening(void);
             void handleNewConnection(int listenFD, int epollFD);
-            void handleClientIO(int clientFD, uint32_t client_event);
+            void handleClientRead(int clientFD, int epollFD);
+            void handleClientWrite(int clientFD, int epollFD);
             void process_request(int clientFD);
             int createSocket(void);
             bool setSocketNonBlocking(int fd);
-            const std::string get_in_addr(struct addrinfo& sa);
-            std::pair<bool, std::string> read_request(int new_fd);
+            const std::string getInAddr(struct addrinfo& sa);
+            std::pair<bool, std::string> readRequest(int new_fd);
+            bool sendRequest(int new_fd);
 
         public:
             struct ServerException : public CustomeExecption {
