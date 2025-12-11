@@ -39,34 +39,40 @@ std::string Router::setContentType(std::string& path) {
 Client Router::route(Client& client) {
 
     std::string root = "./webpage";
-    std::string path = root + client.request.path;
+    std::string raw_path = root + client.request.path;
     std::string error_path = root + "/errors/404.html";
 
-    if(!client.request.is_valid || client.request.http_method == METHOD::UNKNOWN) {
-        client.response.buffer              = getFileBuffer(error_path);
-        client.response.status_code         = "404 Not Found";
-        client.response.content_type        = "text/html; charset=utf-8";
-    }
+    client.response.buffer              = getFileBuffer(error_path);
+    client.response.status_code         = "404 Not Found";
+    client.response.content_type        = "text/html; charset=utf-8";
 
-    struct stat s;
-    if(stat(path.c_str(), &s) == 0) {
-        if(s.st_mode & S_IFDIR) {
-            path += "index.html";
+    bool is_safe = false;
+    if(std::filesystem::exists(raw_path)) {
+        std::filesystem::path root_abs = std::filesystem::canonical(root);
+        std::filesystem::path requested_abs = std::filesystem::canonical(raw_path);
+
+        if(requested_abs.string().starts_with(root_abs.string())) {
+            is_safe = true;
         }
     }
 
-    std::ifstream file_check(path.c_str());
-    if(client.request.http_method == METHOD::GET){
-        if(file_check.good()){
-            file_check.close();
-            client.response.buffer          = getFileBuffer(path);
-            client.response.status_code     = "200 OK";
-            client.response.content_type    = setContentType(path);
-        } else {
-            client.response.buffer          = getFileBuffer(error_path);
-            client.response.status_code     = "404 Not Found";
-            client.response.content_type    = "text/html; charset=utf-8";
+    if(is_safe) {
+        struct stat s;
+        if(stat(raw_path.c_str(), &s) == 0) {
+            if(s.st_mode & S_IFDIR) {
+                raw_path += "index.html";
+            }
+        }
+        std::ifstream file_check(raw_path.c_str());
+        if(client.request.http_method == METHOD::GET){
+            if(file_check.good()){
+                file_check.close();
+                client.response.buffer          = getFileBuffer(raw_path);
+                client.response.status_code     = "200 OK";
+                client.response.content_type    = setContentType(raw_path);
+            } 
         }
     }
+    
     return (client);
 }
