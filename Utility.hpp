@@ -49,6 +49,8 @@ struct Client {
     size_t      client_Fd;
     bool        is_complete;
     std::string buffer_data;
+    std::string response_buffer;
+    size_t      size_data_sent;
 
     void addToBuffer(std::string str) {
         buffer_data.append(str);
@@ -61,6 +63,21 @@ struct Client {
         buffer_data.clear();
         is_complete = false;
         addToBuffer(str);
+    }
+
+    void addToResponseBuffer(std::string str) {
+        response_buffer.append(str);
+    }
+
+    void clearAndUpdateResponseBuffer(std::string str) {
+        response_buffer.clear();
+        addToResponseBuffer(str);
+    }
+
+    bool isResponseCompleted(void) {
+        if (size_data_sent >= response_buffer.size()) {
+            return (true);
+        }
     }
 };
 
