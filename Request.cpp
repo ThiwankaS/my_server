@@ -1,7 +1,7 @@
 #include "Request.hpp"
 
 Request::Request(Client &client) {
-    client = parse_request(client);
+    client = parseRequest(client);
 }
 
 std::vector<std::string> Request::slplit(std::string& str, std::string_view delimeter) {
@@ -67,27 +67,85 @@ std::string Request::setHost(const std::vector<std::string>& lines) {
     return ("");
 }
 
-Client Request::parse_request(Client& client) {
+Client Request::parseRequest(Client& client) {
 
+    client.request = RequestData();
+    
     std::vector<std::string> sections   = slplit(client.request_buffer, "\r\n\r\n");
     std::string& header = sections.at(0);
     client.clearAndUpdateRequestBuffer("");
+
     std::vector<std::string> lines      = slplit(header, "\r\n");
+    
+    std::cout << "line size : " << lines.size() << "\n";
+
+    if(lines.empty()) {
+        client.response.status_code = 400;
+        client.request.is_valid = false;
+        return (client);
+    }
 
     std::istringstream request_stream(lines.at(0));
-    std::string method, path, version;
-    request_stream >> method >> path >> version;
+    std::string method, raw_path, version;
+    request_stream >> method >> raw_path >> version;
 
     client.request.http_method     = setMethod(method);
     client.request.http_version    = setVersion(version);
-    client.request.is_keep_alive   = setConnection(lines);
-    client.request.host            = setHost(lines);
-    client.request.path            = path;
+
+    size_t pos = raw_path.find('?');
+    if(pos != std::string::npos) {
+        client.request.path = raw_path.substr(0, pos);
+        client.request.query_string = raw_path.substr(pos + 1);
+    } else {
+        client.request.path = raw_path;
+        client.request.query_string = "";
+    }
+
+    for(size_t i = 1; i < lines.size(); ++i) {
+        const std::string&  line = lines[i];
+
+        if(line.starts_with("Host:")){
+            size_t pos = line.find(":");
+            if(pos != std::string::npos){
+                std::string value = line.substr(pos + 1);
+                size_t start = value.find_first_not_of(" \t");
+                if(start != std::string::npos) {
+                    client.request.host = value.substr(start);
+                }
+            }
+        } else if (line.starts_with("Connection:")) {
+            if(line.find("keep-alive") != std::string::npos){
+                client.request.is_keep_alive = true;
+            } else {
+                client.request.is_keep_alive = false;
+            }
+        } else if (line.starts_with("Content-Length:")) {
+            size_t pos = line.find(":");
+            if(pos != std::string::npos) {
+                try {
+                    client.request.content_length = std::stoul(line.substr(pos + 1));
+                } catch (...) {
+                    client.request.content_length = 0;
+                }
+            }
+        } else if (line.starts_with("Content-Type:")) {
+            size_t pos = line.find(":");
+            if(pos != std::string::npos) {
+                std::string value = line.substr(pos + 1);
+                size_t start = value.find_first_not_of(" \t");
+                if(start != std::string::npos){
+                    client.request.content_type = value.substr(start);
+                }
+            }
+        }
+    }
+
     if(sections.size() > 1) {
         client.request.body        = sections.at(1);
     } else {
         client.request.body        = "";
     }
+    client.response.status_code    = 200;
     client.request.is_valid        = true;
     return (client);
 }

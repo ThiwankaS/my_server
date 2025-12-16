@@ -248,14 +248,25 @@ namespace HTTP {
         client.addToRequestBuffer(result.second);
         client.size_recv += result.second.size();
 
+        if(client.size_recv > MAX_REQUEST_SIZE) {
+            
+            struct epoll_event event;
+            event.events = EPOLLOUT | EPOLLET;
+            event.data.fd = clientFD;
+            epoll_ctl(epollFD, EPOLL_CTL_MOD, clientFD, &event);
+            return;
+        }
+
         if(client.is_complete) {
-            client = Request::parse_request(client);
+            client = Request::parseRequest(client);
+            Server::printClient(client);
             client = Router::route(client);
             Response::buildResponse(client);
             struct epoll_event event;
-            event.events = EPOLLIN | EPOLLET | EPOLLOUT;
+            event.events = EPOLLOUT | EPOLLET;
             event.data.fd = clientFD;
             epoll_ctl(epollFD, EPOLL_CTL_MOD, clientFD, &event);
+            return;
         }
     }
 
@@ -371,11 +382,20 @@ namespace HTTP {
         return (true);
     }
 
-    void Server::process_request(int clientFD) {
-        (void) clientFD;
-        std::cout << "Request in server side : \n"
-                    << request << "\n";
+    void Server::printClient(Client& client) {
+        std::cout << "Request in server side : \n";
         std::stringstream ss(request);
+        if(client.request.http_method == METHOD::POST) {
+                ss << "Method :  POST " << "\n";   
+        }
+        if(client.request.http_method == METHOD::GET) {
+                ss << "Method :  GET " << "\n";   
+        }
+        ss << "Path : " << client.request.path << "\n";
+        ss << "Query : " << client.request.query_string << "\n";
+        ss << "Content size : " << client.request.content_length << "\n";
+        ss << "Content type : " << client.request.content_type << "\n";
+        ss << "body : {" << client.request.body << "}\n";
         std::cout << ss.str() << "\n";
     }
 }

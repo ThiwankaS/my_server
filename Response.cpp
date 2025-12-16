@@ -4,7 +4,8 @@ std::string Response::buildHeader(Client& client) {
     std::ostringstream os;
     const ResponseData& res = client.response;
 
-    os << "HTTP/1.1 " << res.status_code << "\r\n"
+    os << "HTTP/1.1 " << res.status_code << " "
+        << static_table.at(res.status_code) << "\r\n"
         << "Content-Type: " + res.content_type + "\r\n"
         << "Content-Length: " + std::to_string(res.buffer.size()) + "\r\n"
         << "Connection: keep-alive\r\n"

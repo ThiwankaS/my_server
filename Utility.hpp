@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <vector>
 
+const size_t MAX_REQUEST_SIZE = 5 * 1024 * 1024;
 
 enum class METHOD {
     GET,
@@ -50,7 +51,10 @@ struct RequestData {
     METHOD      http_method;
     VERSION     http_version;
     std::string path;
+    std::string query_string;
     std::string host;
+    std::string content_type;
+    size_t      content_length;
     std::string body;
     bool        is_keep_alive;
     bool        is_valid;
@@ -59,7 +63,10 @@ struct RequestData {
         http_method     = METHOD::UNKNOWN;
         http_version    = VERSION::UNKNOWN;
         path = "";
+        query_string = "";
         host = "";
+        content_type = "";
+        content_length = 0;
         body = "";
         is_keep_alive = false;
         is_valid      = false;
@@ -67,12 +74,12 @@ struct RequestData {
 };
 
 struct ResponseData {
-    std::string         status_code;
+    uint16_t            status_code;
     std::string         content_type;
     std::vector<char>   buffer;
 
     ResponseData() {
-        status_code = "";
+        status_code  = 0;
         content_type = "";
     }
 };
@@ -115,6 +122,7 @@ struct Client {
     }
 
     void clearAndUpdateResponseBuffer(std::string str) {
+        response.status_code = 0;
         response_buffer.clear();
         addToResponseBuffer(str);
     }

@@ -26,7 +26,7 @@ namespace HTTP {
             void handleNewConnection(int listenFD, int epollFD);
             void handleClientRead(int clientFD, int epollFD);
             void handleClientWrite(int clientFD, int epollFD);
-            void process_request(int clientFD);
+            void printClient(Client& client);
             int createSocket(void);
             bool setSocketNonBlocking(int fd);
             const std::string getInAddr(struct addrinfo& sa);
