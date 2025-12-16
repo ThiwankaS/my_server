@@ -8,6 +8,7 @@ class Request {
     public:
         Request(Client& client);
         static Client parseRequest(Client& client);
+        static bool isValidRequest(Client& client);
         static std::vector<std::string> slplit(std::string& str, std::string_view delimeter);
         static METHOD setMethod(const std::string& method);
         static VERSION setVersion(const std::string& version);

@@ -67,6 +67,19 @@ std::string Request::setHost(const std::vector<std::string>& lines) {
     return ("");
 }
 
+bool Request::isValidRequest(Client& client) {
+    
+    METHOD& method      = client.request.http_method; 
+    std::string& path   = client.request.path; 
+    VERSION& version    = client.request.http_version;
+    
+    if(method == METHOD::UNKNOWN || version == VERSION::UNKNOWN || !path.starts_with("/")) {
+        return (false);
+    }
+
+    return (true);
+}
+
 Client Request::parseRequest(Client& client) {
 
     client.request = RequestData();
@@ -82,6 +95,7 @@ Client Request::parseRequest(Client& client) {
     if(lines.empty()) {
         client.response.status_code = 400;
         client.request.is_valid = false;
+        client.request.is_keep_alive = false;
         return (client);
     }
 
@@ -99,6 +113,13 @@ Client Request::parseRequest(Client& client) {
     } else {
         client.request.path = raw_path;
         client.request.query_string = "";
+    }
+
+    if(!isValidRequest(client)) {
+        client.response.status_code = 400;
+        client.request.is_valid = false;
+        client.request.is_keep_alive = false;
+        return (client);
     }
 
     for(size_t i = 1; i < lines.size(); ++i) {
