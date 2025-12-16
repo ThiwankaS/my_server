@@ -9,6 +9,7 @@ class Router {
     public :
         inline static const std::map<uint16_t, std::string> error_routes = {
             { 400 , "./webpage/errors/400.html"},
+            { 403 , "./webpage/errors/403.html"},
             { 404 , "./webpage/errors/404.html"}
         };
         static Client route(Client& client);

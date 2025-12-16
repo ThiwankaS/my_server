@@ -41,54 +41,59 @@ Client Router::route(Client& client) {
     // collect required data to process
     std::string root = "./webpage";
     std::string path = client.request.path;
-    std::string raw_path = root + path;
+    std::string final_path = root + path;
 
-    if(!client.request.is_valid && client.response.status_code == 400) {
+    // if the request is invalid
+    if(!client.request.is_valid) {
+        client.response.status_code     = 400;
+        client.response.buffer          = getFileBuffer(error_routes.at(client.response.status_code));
+        client.response.content_type    = "text/html; charset=utf-8";
+        return (client);
+    }
 
+    // if the requested resources is not availabe
+    if(!std::filesystem::exists(final_path)) {
+        client.response.status_code     = 404;
+        client.response.buffer          = getFileBuffer(error_routes.at(client.response.status_code));
+        client.response.content_type    = "text/html; charset=utf-8";
+        return (client);
+    }
+
+    // if the the path is a directory
+    if(std::filesystem::is_directory(final_path)) {
+        final_path += "/index.html";
+        if(!std::filesystem::exists(final_path)) {
+            client.response.status_code     = 404;
+            client.response.buffer          = getFileBuffer(error_routes.at(client.response.status_code));
+            client.response.content_type    = "text/html; charset=utf-8";
+            return (client);
+        }
+    }
+
+    std::filesystem::path root_abs = std::filesystem::canonical(root);
+    std::filesystem::path requested_abs = std::filesystem::canonical(final_path);
+
+    // if the requested file out side the root directory 
+    if(!requested_abs.string().starts_with(root_abs.string())) {
+        client.response.status_code         = 403;
         client.response.buffer              = getFileBuffer(error_routes.at(client.response.status_code));
         client.response.content_type        = "text/html; charset=utf-8";
         return (client);
     }
-    
+
+    // handling metods
     if(client.request.http_method == METHOD::GET) {
-
-        client.response.status_code         = 404;
-        client.response.buffer              = getFileBuffer(error_routes.at(client.response.status_code));
-        client.response.content_type        = "text/html; charset=utf-8";
-
-        bool is_safe = false;
-        if(std::filesystem::exists(raw_path)) {
-            std::filesystem::path root_abs = std::filesystem::canonical(root);
-            std::filesystem::path requested_abs = std::filesystem::canonical(raw_path);
-
-            if(requested_abs.string().starts_with(root_abs.string())) {
-                is_safe = true;
-            }
-        }
-
-        if(is_safe) {
-            struct stat s;
-            if(stat(raw_path.c_str(), &s) == 0) {
-                if(s.st_mode & S_IFDIR) {
-                    raw_path += "index.html";
-                }
-            }
-            std::ifstream file_check(raw_path.c_str());
-            if(raw_path.find("/cgi-bin/") != std::string::npos && raw_path.ends_with(".py")) {
-                if(file_check.good()){
-                    file_check.close();
-                    client.response.buffer              = getFileBuffer("./webpage/result.html");
-                    client.response.status_code         = 200;
-                    client.response.content_type        = "text/html; charset=utf-8";
-                } 
-            } else {
-                if(file_check.good()){
-                    file_check.close();
-                    client.response.buffer          = getFileBuffer(raw_path);
-                    client.response.status_code     = 200;
-                    client.response.content_type    = setContentType(raw_path);
-                }
-            }
+        // check for a CGI request with URI arguments
+        if(final_path.find("/cgi-bin/") != std::string::npos && final_path.ends_with(".py")) {
+            client.response.buffer          = getFileBuffer("./webpage/result.html");
+            client.response.status_code     = 200;
+            client.response.content_type    = "text/html; charset=utf-8";
+            return (client);
+        } else {
+            client.response.buffer          = getFileBuffer(final_path);
+            client.response.status_code     = 200;
+            client.response.content_type    = setContentType(final_path);
+            return (client);
         }
     }
     
@@ -96,6 +101,7 @@ Client Router::route(Client& client) {
         client.response.buffer              = getFileBuffer("./webpage/result.html");
         client.response.status_code         = 200;
         client.response.content_type        = "text/html; charset=utf-8";
+        return (client);
     }
     
     return (client);

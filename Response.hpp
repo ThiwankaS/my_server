@@ -9,7 +9,7 @@ class Response {
             { 201, "Created" },
             { 202, "Accepted"},
             { 400, "Bad Request" },
-            { 403, "Not Found" },
+            { 403, "Forbidden" },
             { 404, "Not Found" },
             { 406, "Not Acceptable" },
             { 413, "Payload Too Large" },
