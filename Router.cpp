@@ -84,8 +84,9 @@ Client Router::route(Client& client) {
     // handling metods
     if(client.request.http_method == METHOD::GET) {
         // check for a CGI request with URI arguments
-        if(final_path.find("/cgi-bin/") != std::string::npos && final_path.ends_with(".py")) {
-            client.response.buffer          = getFileBuffer("./webpage/result.html");
+        if(final_path.find("/cgi-bin/") != std::string::npos && final_path.ends_with(".cgi")) {
+            std::string result = CGIHandler::execute("./webpage/cgi-bin/cpp_calculator.cgi", client);
+            client.response.buffer.assign(result.begin(), result.end());
             client.response.status_code     = 200;
             client.response.content_type    = "text/html; charset=utf-8";
             return (client);
@@ -98,7 +99,8 @@ Client Router::route(Client& client) {
     }
     
     if(client.request.http_method == METHOD::POST) {
-        client.response.buffer              = getFileBuffer("./webpage/result.html");
+        std::string result = CGIHandler::execute("./webpage/cgi-bin/cpp_calculator.cgi", client);
+        client.response.buffer.assign(result.begin(), result.end());
         client.response.status_code         = 200;
         client.response.content_type        = "text/html; charset=utf-8";
         return (client);

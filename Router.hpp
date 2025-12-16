@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Utility.hpp"
+#include "CGIHandler.hpp"
 
 class Router {
     private:
